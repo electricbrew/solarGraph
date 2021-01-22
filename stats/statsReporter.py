@@ -1,20 +1,25 @@
 import socket
 import pickle
-import datetime
 import struct
 
-path1 = 'test.metric1'
-path2 = 'test.metric2'
 
-metrics = [(path1, (datetime.datetime.now(), 1)), (path2, (datetime.datetime.now(), 2))]
+class StatsReporter:
+    """Class to gather solar production and consumption metrics."""
+    def __init__(self, logger=None):
+        self.logger = logger
 
-payload = pickle.dumps(metrics, protocol=2)
-header = struct.pack("!L", len(payload))
-message = header + payload
-print(f'message = {message}')
+        self.carbonConn = socket.create_connection(('localhost', 2004))
+        if self.logger:
+            self.logger.debug('conn = %s', self.carbonConn)
 
-carbonConn = socket.create_connection(('localhost', 2004))
-print(f'conn = {carbonConn}')
+    def send_metrics_to_db(self, metrics):
+        """Store metrics in Graphite/Carbon db."""
+        payload = pickle.dumps(metrics, protocol=2)
+        header = struct.pack("!L", len(payload))
+        message = header + payload
+        if self.logger:
+            self.logger.debug('Message to db: %s, length=%d', message, len(message))
 
-rc = carbonConn.send(message)
-print(f'send rc = {rc}')
+        rc = self.carbonConn.send(message)
+        if self.logger:
+            self.logger.debug('send rc = %s', rc)
